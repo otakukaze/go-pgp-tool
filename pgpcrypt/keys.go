@@ -9,7 +9,7 @@ import (
 // ReadKeyFile - read key from file
 func ReadKeyFile(r io.Reader) (openpgp.EntityList, error) {
 	keys, err := openpgp.ReadArmoredKeyRing(r)
-	if err != nil {
+	if err != nil || len(keys) == 0 {
 		keys, err = openpgp.ReadKeyRing(r)
 		if err != nil {
 			return nil, err

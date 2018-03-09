@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"log"
@@ -60,88 +61,17 @@ func main() {
 		log.Fatal("DstFile has Exists if override add flag -y ")
 	}
 
-	// go to decrypt file
-	if flags.Decrypt {
-		decryptAction()
-	}
+	flags.KeyFile = tools.ParsePath(flags.KeyFile)
+	flags.SrcFile = tools.ParsePath(flags.SrcFile)
+	flags.DstFile = tools.ParsePath(flags.DstFile)
+
 	if flags.Encrypt {
 		// encryptAction()
 		encrypt()
 	}
-}
-
-func decryptAction() {
-	// open key file
-	keyFile, err := os.Open(flags.KeyFile)
-	handleError(err)
-	defer keyFile.Close()
-
-	keys, err := pgpcrypt.ReadKeyFile(keyFile)
-	handleError(err)
-	if len(keys) == 0 {
-		log.Fatal("key file not validate")
+	if flags.Decrypt {
+		decrypt()
 	}
-
-	srcFile, err := os.Open(flags.SrcFile)
-	handleError(err)
-
-	var dstFile *os.File
-	if tools.CheckExists(flags.DstFile, false) {
-		dstFile, err = os.Open(flags.DstFile)
-		handleError(err)
-		defer dstFile.Close()
-		dstStat, err := dstFile.Stat()
-		handleError(err)
-		err = dstFile.Truncate(dstStat.Size())
-		handleError(err)
-	} else {
-		dstFile, err = os.Create(flags.DstFile)
-		handleError(err)
-		defer dstFile.Close()
-	}
-
-	key := keys[0]
-	err = pgpcrypt.Decrypt(key, flags.Password, srcFile, dstFile)
-	handleError(err)
-}
-
-func encryptAction() {
-	// open key file
-	keyFile, err := os.Open(flags.KeyFile)
-	handleError(err)
-	defer keyFile.Close()
-
-	keys, err := pgpcrypt.ReadKeyFile(keyFile)
-	handleError(err)
-	if len(keys) == 0 {
-		log.Fatal("key file not validate")
-	}
-
-	srcFile, err := os.Open(flags.SrcFile)
-	handleError(err)
-
-	// encBytes, err := pgpcrypt.EncryptBytes(keys, srcFile)
-	// handleError(err)
-
-	// fmt.Println("bytes ::: ", len(encBytes))
-
-	// var dstFile *os.File
-	// if tools.CheckExists(flags.DstFile, false) {
-	// 	dstFile, err = os.Open(flags.DstFile)
-	// 	handleError(err)
-	// 	defer dstFile.Close()
-	// 	dstStat, err := dstFile.Stat()
-	// 	handleError(err)
-	// 	err = dstFile.Truncate(dstStat.Size())
-	// 	handleError(err)
-	// } else {
-	dstFile, err := os.Create(flags.DstFile)
-	handleError(err)
-	defer dstFile.Close()
-	// }
-
-	err = pgpcrypt.Encrypt(keys, srcFile, dstFile)
-	handleError(err)
 }
 
 func handleError(err error) {
@@ -154,48 +84,63 @@ func showUsage() {
 	flag.Usage()
 }
 
-func encrypt() {
+func decrypt() {
 	keyFile, err := os.Open(flags.KeyFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	handleError(err)
 	defer keyFile.Close()
 
-	var keyList openpgp.EntityList
-	keys, err := openpgp.ReadArmoredKeyRing(keyFile)
-	// keys, err := openpgp.ReadKeyRing(keyFile)
-	if err != nil {
-		log.Fatal(err)
+	keyList, err := pgpcrypt.ReadKeyFile(keyFile)
+	handleError(err)
+	if len(keyList) == 0 {
+		handleError(errors.New("key not found"))
 	}
 
-	keyList = append(keyList, keys...)
+	key := keyList[0]
 
-	distFile, err := os.Create(flags.DstFile)
-	if err != nil {
-		log.Fatal(err)
+	passphraseByte := []byte(flags.Password)
+	key.PrivateKey.Decrypt(passphraseByte)
+	for _, sub := range key.Subkeys {
+		sub.PrivateKey.Decrypt(passphraseByte)
 	}
-	defer distFile.Close()
 
-	// distBuf := new(bytes.Buffer)
+	dstFile, err := os.Create(flags.DstFile)
+	handleError(err)
+	defer dstFile.Close()
 
 	srcFile, err := os.Open(flags.SrcFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	handleError(err)
+	defer srcFile.Close()
+
+	md, err := openpgp.ReadMessage(srcFile, keyList, nil, nil)
+
+	_, err = io.Copy(dstFile, md.UnverifiedBody)
+	handleError(err)
+}
+
+func encrypt() {
+	keyFile, err := os.Open(flags.KeyFile)
+	handleError(err)
+	defer keyFile.Close()
+
+	keyList, err := pgpcrypt.ReadKeyFile(keyFile)
+	handleError(err)
+
+	distFile, err := os.Create(flags.DstFile)
+	handleError(err)
+	defer distFile.Close()
+
+	srcFile, err := os.Open(flags.SrcFile)
+	handleError(err)
 	defer srcFile.Close()
 
 	fhint := &openpgp.FileHints{}
 	fhint.IsBinary = true
 
 	tmpWriter, err := openpgp.Encrypt(distFile, keyList, nil, fhint, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	handleError(err)
 	defer tmpWriter.Close()
 
 	_, err = io.Copy(tmpWriter, srcFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	handleError(err)
 
 }

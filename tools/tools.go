@@ -8,7 +8,12 @@ import (
 )
 
 // ParsePath - parse file path to absPath
-func ParsePath(wd, dst string) string {
+func ParsePath(dst string) string {
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = ""
+	}
+
 	if []rune(dst)[0] == '~' {
 		home := UserHomeDir()
 		if len(home) > 0 {
@@ -39,6 +44,7 @@ func UserHomeDir() string {
 
 // CheckExists - check file exists
 func CheckExists(filePath string, allowDir bool) bool {
+	filePath = ParsePath(filePath)
 	stat, err := os.Stat(filePath)
 	if err != nil && !os.IsExist(err) {
 		return false
