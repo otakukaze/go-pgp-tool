@@ -8,11 +8,11 @@ import (
 	"os"
 	"path"
 
-	"git.trj.tw/root/go-pgp-tool/pgpcrypt"
+	"github.com/otakukaze/go-pgp-tool/pgpcrypt"
 	"golang.org/x/crypto/openpgp"
 
-	"git.trj.tw/root/go-pgp-tool/libs"
-	"git.trj.tw/root/go-pgp-tool/tools"
+	"github.com/otakukaze/go-pgp-tool/libs"
+	"github.com/otakukaze/go-pgp-tool/tools"
 )
 
 var (
