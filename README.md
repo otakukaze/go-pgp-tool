@@ -10,6 +10,11 @@ show usage
 $ ./go-pgp-tool -h
 ```
 
+## test
+```bash
+$ go test -v ./...
+```
+
 ### options
 ```
   Usage options:
