@@ -1,15 +1,12 @@
 package main
 
 import (
-	"errors"
 	"flag"
-	"io"
 	"log"
 	"os"
 	"path"
 
 	"github.com/otakukaze/go-pgp-tool/pgpcrypt"
-	"golang.org/x/crypto/openpgp"
 
 	"github.com/otakukaze/go-pgp-tool/libs"
 	"github.com/otakukaze/go-pgp-tool/tools"
@@ -66,11 +63,35 @@ func main() {
 	flags.DstFile = tools.ParsePath(flags.DstFile)
 
 	if flags.Encrypt {
-		// encryptAction()
-		encrypt()
+		// encrypt()
+		keyIO, err := os.Open(flags.KeyFile)
+		handleError(err)
+
+		srcIO, err := os.Open(flags.SrcFile)
+		handleError(err)
+
+		dstIO, err := os.Create(flags.DstFile)
+		handleError(err)
+
+		err = pgpcrypt.Encrypt2(keyIO, srcIO, dstIO)
+
+		// err := pgpcrypt.Encrypt(flags.KeyFile, flags.SrcFile, flags.DstFile)
+		handleError(err)
 	}
 	if flags.Decrypt {
-		decrypt()
+		// decrypt()
+		keyIO, err := os.Open(flags.KeyFile)
+		handleError(err)
+
+		srcIO, err := os.Open(flags.SrcFile)
+		handleError(err)
+
+		dstIO, err := os.Create(flags.DstFile)
+		handleError(err)
+
+		err = pgpcrypt.Decrypt2(keyIO, srcIO, dstIO, flags.Password)
+		// err := pgpcrypt.Decrypt(flags.KeyFile, flags.SrcFile, flags.DstFile, flags.Password)
+		handleError(err)
 	}
 }
 
@@ -82,65 +103,4 @@ func handleError(err error) {
 
 func showUsage() {
 	flag.Usage()
-}
-
-func decrypt() {
-	keyFile, err := os.Open(flags.KeyFile)
-	handleError(err)
-	defer keyFile.Close()
-
-	keyList, err := pgpcrypt.ReadKeyFile(keyFile)
-	handleError(err)
-	if len(keyList) == 0 {
-		handleError(errors.New("key not found"))
-	}
-
-	key := keyList[0]
-
-	passphraseByte := []byte(flags.Password)
-	key.PrivateKey.Decrypt(passphraseByte)
-	for _, sub := range key.Subkeys {
-		sub.PrivateKey.Decrypt(passphraseByte)
-	}
-
-	dstFile, err := os.Create(flags.DstFile)
-	handleError(err)
-	defer dstFile.Close()
-
-	srcFile, err := os.Open(flags.SrcFile)
-	handleError(err)
-	defer srcFile.Close()
-
-	md, err := openpgp.ReadMessage(srcFile, keyList, nil, nil)
-
-	_, err = io.Copy(dstFile, md.UnverifiedBody)
-	handleError(err)
-}
-
-func encrypt() {
-	keyFile, err := os.Open(flags.KeyFile)
-	handleError(err)
-	defer keyFile.Close()
-
-	keyList, err := pgpcrypt.ReadKeyFile(keyFile)
-	handleError(err)
-
-	distFile, err := os.Create(flags.DstFile)
-	handleError(err)
-	defer distFile.Close()
-
-	srcFile, err := os.Open(flags.SrcFile)
-	handleError(err)
-	defer srcFile.Close()
-
-	fhint := &openpgp.FileHints{}
-	fhint.IsBinary = true
-
-	tmpWriter, err := openpgp.Encrypt(distFile, keyList, nil, fhint, nil)
-	handleError(err)
-	defer tmpWriter.Close()
-
-	_, err = io.Copy(tmpWriter, srcFile)
-	handleError(err)
-
 }
