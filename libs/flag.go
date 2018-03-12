@@ -2,6 +2,7 @@ package libs
 
 import (
 	"flag"
+	"reflect"
 )
 
 // Flags - flag values struct
@@ -26,4 +27,17 @@ func RegFlag(f *Flags) {
 	flag.StringVar(&f.KeyFile, "k", "", "key `file path`")
 	flag.BoolVar(&f.Override, "y", false, "if output file exists override")
 	flag.StringVar(&f.Password, "p", "", "private key password")
+}
+
+func (f *Flags) ToMap() map[string]interface{} {
+	t := reflect.ValueOf(f).Elem()
+
+	smap := make(map[string]interface{})
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		smap[t.Type().Field(i).Name] = f.Interface()
+	}
+
+	return smap
 }
