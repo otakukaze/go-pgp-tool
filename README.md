@@ -26,8 +26,8 @@ $ go test -v ./...
       private key password with decrypt usage
     -i file path
       source file path
-    -o file path
-      output file path
+    -o [file path|-]
+      output file path or stdout
     -k file path
       key file path
 ```

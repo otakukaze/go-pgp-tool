@@ -23,12 +23,13 @@ func RegFlag(f *Flags) {
 	flag.BoolVar(&f.Decrypt, "d", false, "decrypt file")
 	flag.BoolVar(&f.Encrypt, "e", false, "encrypt file")
 	flag.StringVar(&f.SrcFile, "i", "", "input source `file path`")
-	flag.StringVar(&f.DstFile, "o", "", "output `file path`")
+	flag.StringVar(&f.DstFile, "o", "", "output `[file path|-]`")
 	flag.StringVar(&f.KeyFile, "k", "", "key `file path`")
 	flag.BoolVar(&f.Override, "y", false, "if output file exists override")
 	flag.StringVar(&f.Password, "p", "", "private key password")
 }
 
+// ToMap - flags struct to map
 func (f *Flags) ToMap() map[string]interface{} {
 	t := reflect.ValueOf(f).Elem()
 
