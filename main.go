@@ -50,17 +50,21 @@ func main() {
 	if !tools.CheckExists(flags.SrcFile, false) {
 		log.Fatal("SrcFile not exists")
 	}
-	dir := path.Dir(flags.DstFile)
-	if !tools.CheckExists(dir, true) {
-		log.Fatal("DstFile parent directory not exists")
-	}
-	if !flags.Override && tools.CheckExists(flags.DstFile, false) {
-		log.Fatal("DstFile has Exists if override add flag -y ")
+	if flags.DstFile != "-" {
+		dir := path.Dir(flags.DstFile)
+		if !tools.CheckExists(dir, true) {
+			log.Fatal("DstFile parent directory not exists")
+		}
+		if !flags.Override && tools.CheckExists(flags.DstFile, false) {
+			log.Fatal("DstFile has Exists if override add flag -y ")
+		}
+		flags.DstFile = tools.ParsePath(flags.DstFile)
 	}
 
 	flags.KeyFile = tools.ParsePath(flags.KeyFile)
 	flags.SrcFile = tools.ParsePath(flags.SrcFile)
-	flags.DstFile = tools.ParsePath(flags.DstFile)
+
+	// fmt.Println(flags.ToMap())
 
 	if flags.Encrypt {
 		// encrypt()
@@ -70,8 +74,11 @@ func main() {
 		srcIO, err := os.Open(flags.SrcFile)
 		handleError(err)
 
-		dstIO, err := os.Create(flags.DstFile)
-		handleError(err)
+		dstIO := os.Stdout
+		if flags.DstFile != "-" {
+			dstIO, err = os.Create(flags.DstFile)
+			handleError(err)
+		}
 
 		err = pgpcrypt.Encrypt2(keyIO, srcIO, dstIO)
 
@@ -86,8 +93,11 @@ func main() {
 		srcIO, err := os.Open(flags.SrcFile)
 		handleError(err)
 
-		dstIO, err := os.Create(flags.DstFile)
-		handleError(err)
+		dstIO := os.Stdout
+		if flags.DstFile != "-" {
+			dstIO, err = os.Create(flags.DstFile)
+			handleError(err)
+		}
 
 		err = pgpcrypt.Decrypt2(keyIO, srcIO, dstIO, flags.Password)
 		// err := pgpcrypt.Decrypt(flags.KeyFile, flags.SrcFile, flags.DstFile, flags.Password)
